@@ -1,0 +1,31 @@
+[global]
+   workgroup = WORKGROUP
+   server string = %h server (HostOmega Samba)
+   ntlm auth = yes
+   client min protocol = NT1
+   server min protocol = NT1
+   client max protocol = SMB3
+   server max protocol = SMB3
+
+   log file = /var/log/samba/log
+   log level = 0 
+   max log size = 10000
+
+   panic action = /usr/share/samba/panic-action %d
+
+   server role = standalone server
+   obey pam restrictions = yes
+   unix password sync = yes
+
+   passwd program = /usr/bin/passwd %u
+   passwd chat = *Enter\snew\s*\spassword:* %n\n *Retype\snew\s*\spassword:* %n\n *password\supdated\ssuccessfully* .
+   pam password change = yes
+
+   map to guest = bad user
+
+[Public]
+   path = /srv/samba/public
+   browseable = yes
+   guest ok = yes
+   read only = yes
+   force user = nobody

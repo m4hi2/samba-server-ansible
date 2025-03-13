@@ -1,0 +1,9 @@
+---
+- name: Update OS Playbook
+  hosts: "*"
+  become: true
+  tasks:
+    - name: Update OS
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: true
