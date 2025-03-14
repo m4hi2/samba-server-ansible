@@ -1,0 +1,104 @@
+---
+- name: Download Linux ISOs to Samba Public Share
+  hosts: smb
+  become: true
+  vars:
+    samba_share_path: /srv/samba/public
+  tasks:
+    - name: Check if Samba is installed
+      ansible.builtin.command: which smbd
+      register: samba_installed
+      changed_when: false
+      failed_when: samba_installed.rc != 0
+
+    - name: Ensure Samba share directory exists
+      ansible.builtin.file:
+        path: "{{ samba_share_path }}"
+        state: directory
+        owner: nobody
+        group: nogroup
+        mode: "0755"
+
+    - name: Ensure Ubuntu OS directory exists
+      ansible.builtin.file:
+        path: "{{ samba_share_path }}/ubuntu"
+        state: directory
+        owner: nobody
+        group: nogroup
+        mode: "0755"
+
+    - name: Ensure Debian OS directory exists
+      ansible.builtin.file:
+        path: "{{ samba_share_path }}/debian"
+        state: directory
+        owner: nobody
+        group: nogroup
+        mode: "0755"
+
+    - name: Ensure AlmaLinux directory exists
+      ansible.builtin.file:
+        path: "{{ samba_share_path }}/alma"
+        state: directory
+        owner: nobody
+        group: nogroup
+        mode: "0755"
+
+    - name: Download Ubuntu ISO
+      ansible.builtin.get_url:
+        url: "{{ item }}"
+        dest: "{{ samba_share_path }}/ubuntu/{{ item | basename }}"
+        mode: "0644"
+        owner: nobody
+        group: nogroup
+      loop:
+        - "https://mirror.xeonbd.com/ubuntu-releases/24.04.2/ubuntu-24.04.2-desktop-amd64.iso"
+        - "https://mirror.xeonbd.com/ubuntu-releases/24.04.2/ubuntu-24.04.2-live-server-amd64.iso"
+        - "https://mirror.xeonbd.com/ubuntu-releases/24.10/ubuntu-24.10-desktop-amd64.iso"
+        - "https://mirror.xeonbd.com/ubuntu-releases/24.10/ubuntu-24.10-live-server-amd64.iso"
+      async: 3600
+      poll: 0
+      register: ubuntu_download
+
+    - name: Download Debian ISOs
+      ansible.builtin.get_url:
+        url: "{{ item }}"
+        dest: "{{ samba_share_path }}/debian/{{ item | basename }}"
+        mode: "0644"
+        owner: nobody
+        group: nogroup
+      loop:
+        - "https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-12.9.0-amd64-netinst.iso"
+      async: 3600
+      poll: 0
+      register: debian_download
+
+    - name: Download AlmaLinux ISOs
+      ansible.builtin.get_url:
+        url: "{{ item }}"
+        dest: "{{ samba_share_path }}/alma/{{ item | basename }}"
+        mode: "0644"
+        owner: nobody
+        group: nogroup
+      loop:
+        - "https://mirror.xeonbd.com/almalinux/9.5/isos/x86_64/AlmaLinux-9-latest-x86_64-minimal.iso"
+      async: 3600
+      poll: 0
+      register: alma_download
+
+    - name: Merge async jobs into a single list
+      ansible.builtin.set_fact:
+        async_jobs: >
+          "{{
+          ubuntu_download.results | map(attribute='ansible_job_id') | list +
+          debian_download.results | map(attribute='ansible_job_id') | list +
+          alma_download.results | map(attribute='ansible_job_id') | list
+          }}"
+
+    - name: Wait for all downloads to finish
+      ansible.builtin.async_status:
+        jid: "{{ item }}"
+      loop: "{{ async_jobs }}"
+      register: job_result
+      until: job_result.finished
+      retries: 300
+      delay: 60
