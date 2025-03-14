@@ -43,6 +43,30 @@
         group: nogroup
         mode: "0755"
 
+    - name: Ensure Gparted directory exists
+      ansible.builtin.file:
+        path: "{{ samba_share_path }}/gparted"
+        state: directory
+        owner: nobody
+        group: nogroup
+        mode: "0755"
+
+    - name: Ensure Proxmox directory exists
+      ansible.builtin.file:
+        path: "{{ samba_share_path }}/proxmox"
+        state: directory
+        owner: nobody
+        group: nogroup
+        mode: "0755"
+
+    - name: Ensure Utils directory exists
+      ansible.builtin.file:
+        path: "{{ samba_share_path }}/utils"
+        state: directory
+        owner: nobody
+        group: nogroup
+        mode: "0755"
+
     - name: Check if Ubuntu ISO exists
       ansible.builtin.stat:
         path: "{{ samba_share_path }}/ubuntu/{{ item | basename }}"
@@ -103,13 +127,73 @@
       poll: 0
       register: alma_download
 
+    - name: Check if Gparted ISO exists
+      ansible.builtin.stat:
+        path: "{{ samba_share_path }}/gparted/{{ item | basename }}"
+      register: gparted_iso_stat
+      loop:
+        - "https://downloads.sourceforge.net/gparted/gparted-live-1.7.0-1-amd64.iso"
+
+    - name: Download Gparted ISO if it doesn't exist
+      ansible.builtin.get_url:
+        url: "{{ item }}"
+        dest: "{{ samba_share_path }}/gparted/{{ item | basename }}"
+        mode: "0644"
+        owner: nobody
+        group: nogroup
+      loop: "{{ gparted_iso_stat.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item') | list }}"
+      async: 3600
+      poll: 0
+      register: gparted_download
+
+    - name: Check if Proxmox ISO exists
+      ansible.builtin.stat:
+        path: "{{ samba_share_path }}/proxmox/{{ item | basename }}"
+      register: proxmox_iso_stat
+      loop:
+        - "https://enterprise.proxmox.com/iso/proxmox-ve_8.3-1.iso"
+
+    - name: Download Proxmox ISO if it doesn't exist
+      ansible.builtin.get_url:
+        url: "{{ item }}"
+        dest: "{{ samba_share_path }}/proxmox/{{ item | basename }}"
+        mode: "0644"
+        owner: nobody
+        group: nogroup
+      loop: "{{ proxmox_iso_stat.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item') | list }}"
+      async: 3600
+      poll: 0
+      register: proxmox_download
+
+    - name: Check if Utils exists
+      ansible.builtin.stat:
+        path: "{{ samba_share_path }}/utils/{{ item | basename }}"
+      register: utils_stat
+      loop:
+        - "http://smb-bd1.metrovps.com/HDSentinel"
+
+    - name: Download Utils if it doesn't exist
+      ansible.builtin.get_url:
+        url: "{{ item }}"
+        dest: "{{ samba_share_path }}/utils/{{ item | basename }}"
+        mode: "0644"
+        owner: nobody
+        group: nogroup
+      loop: "{{ utils_stat.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item') | list }}"
+      async: 3600
+      poll: 0
+      register: utils_download
+
     - name: Merge async jobs into a single list
       ansible.builtin.set_fact:
         async_jobs: >
           {{
           ubuntu_download.results | map(attribute='ansible_job_id') | list +
           debian_download.results | map(attribute='ansible_job_id') | list +
-          alma_download.results | map(attribute='ansible_job_id') | list
+          alma_download.results | map(attribute='ansible_job_id') | list +
+          gparted_download.results | map(attribute='ansible_job_id') | list +
+          proxmox_download.results | map(attribute='ansible_job_id') | list +
+          utils_download.results | map(attribute='ansible_job_id') | list
           }}
 
     - name: Wait for all downloads to finish
