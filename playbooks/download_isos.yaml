@@ -43,44 +43,62 @@
         group: nogroup
         mode: "0755"
 
-    - name: Download Ubuntu ISO
+    - name: Check if Ubuntu ISO exists
+      ansible.builtin.stat:
+        path: "{{ samba_share_path }}/ubuntu/{{ item | basename }}"
+      register: ubuntu_iso_stat
+      loop:
+        - "https://mirror.xeonbd.com/ubuntu-releases/24.04.2/ubuntu-24.04.2-desktop-amd64.iso"
+        - "https://mirror.xeonbd.com/ubuntu-releases/24.04.2/ubuntu-24.04.2-live-server-amd64.iso"
+        - "https://mirror.xeonbd.com/ubuntu-releases/24.10/ubuntu-24.10-desktop-amd64.iso"
+        - "https://mirror.xeonbd.com/ubuntu-releases/24.10/ubuntu-24.10-live-server-amd64.iso"
+
+    - name: Download Ubuntu ISO if it doesn't exist
       ansible.builtin.get_url:
         url: "{{ item }}"
         dest: "{{ samba_share_path }}/ubuntu/{{ item | basename }}"
         mode: "0644"
         owner: nobody
         group: nogroup
-      loop:
-        - "https://mirror.xeonbd.com/ubuntu-releases/24.04.2/ubuntu-24.04.2-desktop-amd64.iso"
-        - "https://mirror.xeonbd.com/ubuntu-releases/24.04.2/ubuntu-24.04.2-live-server-amd64.iso"
-        - "https://mirror.xeonbd.com/ubuntu-releases/24.10/ubuntu-24.10-desktop-amd64.iso"
-        - "https://mirror.xeonbd.com/ubuntu-releases/24.10/ubuntu-24.10-live-server-amd64.iso"
+      loop: "{{ ubuntu_iso_stat.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item') | list }}"
       async: 3600
       poll: 0
       register: ubuntu_download
 
-    - name: Download Debian ISOs
+    - name: Check if Debian ISO exists
+      ansible.builtin.stat:
+        path: "{{ samba_share_path }}/debian/{{ item | basename }}"
+      register: debian_iso_stat
+      loop:
+        - "https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-12.9.0-amd64-netinst.iso"
+
+    - name: Download Debian ISO if it doesn't exist
       ansible.builtin.get_url:
         url: "{{ item }}"
         dest: "{{ samba_share_path }}/debian/{{ item | basename }}"
         mode: "0644"
         owner: nobody
         group: nogroup
-      loop:
-        - "https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-12.9.0-amd64-netinst.iso"
+      loop: "{{ debian_iso_stat.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item') | list }}"
       async: 3600
       poll: 0
       register: debian_download
 
-    - name: Download AlmaLinux ISOs
+    - name: Check if AlmaLinux ISO exists
+      ansible.builtin.stat:
+        path: "{{ samba_share_path }}/alma/{{ item | basename }}"
+      register: alma_iso_stat
+      loop:
+        - "https://mirror.xeonbd.com/almalinux/9.5/isos/x86_64/AlmaLinux-9-latest-x86_64-minimal.iso"
+
+    - name: Download AlmaLinux ISO if it doesn't exist
       ansible.builtin.get_url:
         url: "{{ item }}"
         dest: "{{ samba_share_path }}/alma/{{ item | basename }}"
         mode: "0644"
         owner: nobody
         group: nogroup
-      loop:
-        - "https://mirror.xeonbd.com/almalinux/9.5/isos/x86_64/AlmaLinux-9-latest-x86_64-minimal.iso"
+      loop: "{{ alma_iso_stat.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item') | list }}"
       async: 3600
       poll: 0
       register: alma_download
