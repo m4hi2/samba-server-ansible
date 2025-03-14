@@ -88,11 +88,11 @@
     - name: Merge async jobs into a single list
       ansible.builtin.set_fact:
         async_jobs: >
-          "{{
+          {{
           ubuntu_download.results | map(attribute='ansible_job_id') | list +
           debian_download.results | map(attribute='ansible_job_id') | list +
           alma_download.results | map(attribute='ansible_job_id') | list
-          }}"
+          }}
 
     - name: Wait for all downloads to finish
       ansible.builtin.async_status:
