@@ -50,6 +50,11 @@
         dest: /etc/nginx/sites-enabled/smb.hostomega.com
         state: link
 
+    - name: Remove default Nginx site configuration
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
     - name: Test Nginx configuration
       ansible.builtin.command:
         cmd: nginx -t
