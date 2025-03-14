@@ -1,5 +1,5 @@
 [smb]
-160.191.162.52
+160.191.163.123
 
 [smb:vars]
 ansible_python_interpreter=/usr/bin/python3
